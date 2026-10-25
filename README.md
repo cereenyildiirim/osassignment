@@ -55,15 +55,7 @@ The 16 tests cover the hand-calculated A/B schedules and metrics, idle time, tie
 
 ## Report
 
-The [English report](docs/CSE513_Assignment_Report.pdf) includes the eight worked examples, additional tests and analysis. Question 6 describes a deliberately introduced RR queue-order error in a temporary copy of the engine.
-
-To reproduce the error experiment:
-
-```sh
-node scripts/rr-boundary-experiment.mjs
-```
-
-The script checks that the existing regression test fails for the faulty copy and passes for the correct engine. It leaves the application code unchanged. This is a controlled experiment, not a claim that the bug occurred during the original implementation.
+The [English report](docs/CSE513_Assignment_Report.pdf) includes the eight worked examples, additional tests, analysis and local setup instructions.
 
 To regenerate the PDF and editable Markdown, install Python's `reportlab` package and run:
 

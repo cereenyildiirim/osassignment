@@ -1,18 +1,16 @@
-## CSE513 Assignment 1: CPU Scheduling Simulator
+# CSE513 Assignment 1: CPU Scheduling Simulator
 
-[https://cereenyildiirim.github.io/osassignment/](https://cereenyildiirim.github.io/osassignment/)
+[Working website](https://cereenyildiirim.github.io/osassignment/)
 
-Analysis question 6 documents a deliberately introduced error in a temporary copy of the engine.
+Gebze Technical University
 
-### Overview
+## Model and local setup
 
-The simulator shows how FCFS, non-preemptive SJF, SRTF and Round Robin schedule the same processes. Each run produces a Gantt chart, per-process metrics and three averages. The website lets users edit the process list, load either assignment workload and change the RR quantum.
+### Scheduling model
 
-The model has one CPU, one CPU burst per process, no I/O and zero context-switch cost. Times are integer units, not measured wall-clock time. This is a scheduling-policy model, not an implementation of Ubuntu's scheduler.
+The simulator compares FCFS, non-preemptive SJF, SRTF and Round Robin on one CPU. Each process has one CPU burst, with no I/O and zero context-switch cost. This is a policy model, not Ubuntu's actual scheduler.
 
-### Scheduling rules
-
-FCFS selects the earliest arrival. SJF selects the shortest ready burst when the CPU becomes free. SRTF compares remaining times and preempts only for a strictly shorter job. RR uses a FIFO queue and puts boundary arrivals ahead of the unfinished process being requeued. Other ties use arrival time, then input order. The CPU is idle only when no process is ready.
+FCFS follows arrival order. SJF selects the shortest ready burst when the CPU becomes free. SRTF preempts only for a strictly shorter remaining time. RR uses a FIFO queue, adding boundary arrivals before requeuing an unfinished process. Other ties use arrival time, then input order. The CPU is idle only when no process is ready.
 
 ### Metrics
 
@@ -20,13 +18,19 @@ FCFS selects the earliest arrival. SJF selects the shortest ready burst when the
 **Waiting (WT)** = turnaround - CPU burst
 **Response (RT)** = first start - arrival
 
-The example tables use A for arrival, B for burst, S for first start and C for completion. Intervals use [start, end): a run from 2 to 5 consumes three units.
+Tables use A for arrival, B for burst, S for first start and C for completion. Intervals use [start, end), so 2-5 represents three time units.
 
-### Implementation and checks
+### Run locally
 
-The site uses HTML, CSS and JavaScript modules, with no backend or runtime packages. The scheduling engine is separate from the page code. The hand calculations below were worked out during the guided walkthrough before the engine was written, then saved as expected values in the tests.
+Download the source ZIP from the repository or clone the feature branch. Open a terminal in the project folder and run:
 
-All 16 scheduling tests pass. Browser checks cover the eight A/B runs, displayed metrics, execution intervals, invalid inputs and mobile layouts. The tables below show actual engine output rather than screenshots.
+**python3 -m http.server 8000 --bind 127.0.0.1**
+
+Open **http://127.0.0.1:8000** in a modern browser. On Windows, **py -m http.server 8000 --bind 127.0.0.1** can be used instead. Stop the server with Ctrl+C. Python 3 is needed only to serve the files locally; no npm installation, backend or database is required. JavaScript modules should be opened through the server rather than by double-clicking index.html.
+
+Load Workload A or B, choose an algorithm, set the quantum for RR and click **Run simulation**. Processes can also be added, edited or removed. Node.js 22 or later is needed only for the tests: **node --test scheduler.test.mjs**. All 16 tests pass.
+
+The same local setup instructions, dependencies and limitations are documented in **README.md**, included with the source code.
 
 Source code: [github.com/cereenyildiirim/osassignment/tree/feature](https://github.com/cereenyildiirim/osassignment/tree/feature)
 
@@ -332,10 +336,6 @@ Input order: Z(arrival 0, burst 1), A(arrival 0, burst 1). Expected under all fo
 
 Input: A(arrival 0, burst 5), B(arrival 1, burst 1). Expected SRTF timeline: 0-1 A | 1-2 B | 2-6 A. A has TAT=6, WT=1, RT=0; B has TAT=1 and WT=RT=0. This checks preemption, preservation of remaining time and resumption of the longer job. Result: passed.
 
-### Boundary cases
-
-SRTF keeps A running for A(0,3), B(1,2): 0-3 A | 3-5 B. For RR with A(0,4), B(2,1), q=2, the arrival at time 2 must run before A is requeued: 0-2 A | 2-3 B | 3-5 A. A single RR process A(0,5), q=2, must retain three slices: 0-2 A | 2-4 A | 4-5 A. These checks pass.
-
 ### General correctness properties
 
 | Property | Check |
@@ -363,7 +363,7 @@ SRTF gives the lowest average waiting time, 2.5, and the lowest average response
 
 ### 2. What changes with RR quantum 1, 2 and 4?
 
-The following experiment uses the same workloads and engine with three quantum values.
+The following results use Workload A with three quantum values.
 
 **Workload A**
 
@@ -373,17 +373,9 @@ The following experiment uses the same workloads and engine with three quantum v
 | 2 | 8.5 | 4.75 | 1.75 |
 | 4 | 9.25 | 5.5 | 3.75 |
 
-**Workload B**
-
-| Quantum | Average TAT | Average WT | Average RT |
-| --- | --- | --- | --- |
-| 1 | 2.5 | 0.75 | 0.25 |
-| 2 | 2.75 | 1 | 0.75 |
-| 4 | 2.75 | 1 | 1 |
-
 For A, reducing q from 2 to 1 improves response from 1.75 to 0.75 but leaves waiting at 4.75 and turnaround at 8.5. A shorter quantum does not improve every metric. It gets processes their first CPU time sooner, but also spreads their work across more turns. Completion time depends on the resulting queue order, not just how soon a process first runs.
 
-For B, q=1 gives better averages than q=2 or q=4. With larger slices, P2 waits longer behind P1. All of these results assume zero switching cost. In a real system, extra context switches would add another cost to very small quantum values.
+These results assume zero switching cost. In a real system, extra context switches would add another cost to very small quantum values.
 
 ## Analysis: assumptions and verification
 
@@ -399,41 +391,10 @@ A real operating system usually does not know when a program will finish its nex
 
 Yes. A continuing stream of short jobs can repeatedly push a long job out of the SJF selection or interrupt it under SRTF. The assignment workloads are finite, so arrivals eventually stop. With finite bursts and no avoidable idle time, every process eventually finishes, even if a long process waits much longer than the others.
 
-## Implementation error experiment
+### 6. Implementation mistake
 
-### 6. RR queue order at a quantum boundary
-
-For this example, a queue-order mistake was deliberately introduced in a temporary copy of the engine. This was a controlled test experiment, not a defect originally found in the application. The experiment can be repeated with **node scripts/rr-boundary-experiment.mjs**.
-
-### The mistake
-
-The faulty version puts the unfinished running process back in the queue before adding new arrivals. The assignment requires the opposite order at a quantum boundary. The two operations are individually valid, so the code runs without a syntax error; the scheduling decision is wrong.
-
-Faulty order: **requeue running process; enqueue arrivals**.
-Correct order: **enqueue arrivals; requeue running process**.
-
-### A small test that exposes it
-
-Input: A(arrival 0, burst 4), B(arrival 2, burst 1), quantum=2. A runs from 0 to 2. At time 2, A has two units left and B has just arrived. B must be queued before A.
-
-**Expected:** 0-2: A | 2-3: B | 3-5: A
-**Faulty output:** 0-2: A | 2-4: A | 4-5: B
-
-| Version | Process | Completion | Waiting | Response |
-| --- | --- | --- | --- | --- |
-| Correct | A | 5 | 1 | 0 |
-| Correct | B | 3 | 0 | 0 |
-| Faulty | A | 4 | 0 | 0 |
-| Faulty | B | 5 | 2 | 2 |
-
-In the faulty run, B waits until time 4 instead of starting at time 2. Its waiting and response times both increase from 0 to 2. Every process still receives its full burst and no intervals overlap, so the general correctness properties alone would not catch this policy error.
-
-### Test result and correction
-
-The existing test, **RR: boundary arrivals are enqueued before the running process**, compares the complete timeline with the expected one. It fails with an assertion error for the faulty engine (exit code 1) and passes with the correct engine (exit code 0). Moving arrival handling before requeuing fixes the decision at time 2. The experiment leaves the project engine unchanged; all 16 regular scheduling tests still pass.
+No actual scheduling defect has been recorded during development so far.
 
 ### AI assistance
 
-OpenAI Codex helped explain the scheduling rules, work through the examples, write and debug the JavaScript, design the controlled error experiment, and edit this report. Generated results were checked against the earlier calculations, the Node.js tests and browser checks. Python and ReportLab were used to create the PDF. No corrected or rejected AI suggestion has been recorded so far.
-
-The assignment rules and metric definitions come from CSE513-Assignment-1.pdf.
+OpenAI Codex was used to explain the scheduling rules, work through examples, help implement the simulator and edit the report. The generated code and calculations were checked against hand-calculated schedules, the Node.js tests and browser checks.
