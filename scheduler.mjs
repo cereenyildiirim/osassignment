@@ -1,26 +1,26 @@
-// Bu modül hem tarayıcıda hem Node.js'te çalışır; arayüze bağımlı değildir.
+// This module runs in both the browser and Node.js without UI dependencies.
 export const ALGORITHMS = ['FCFS', 'SJF', 'SRTF', 'RR'];
 
 function validate(processes, algorithm, quantum) {
-  if (!ALGORITHMS.includes(algorithm)) throw new Error('Geçerli bir algoritma seçin.');
+  if (!ALGORITHMS.includes(algorithm)) throw new Error('Select a valid scheduling algorithm.');
   if (!Array.isArray(processes) || processes.length === 0) {
-    throw new Error('En az bir işlem ekleyin.');
+    throw new Error('Add at least one process.');
   }
   const ids = new Set();
   let totalBurst = 0;
   let latestArrival = 0;
   const jobs = processes.map((process, index) => {
     if (!process || typeof process.id !== 'string' || !process.id.trim()) {
-      throw new Error(`${index + 1}. işlemin adı boş olamaz.`);
+      throw new Error(`Process ${index + 1} must have a nonempty ID.`);
     }
     const id = process.id.trim();
-    if (ids.has(id)) throw new Error(`İşlem adları benzersiz olmalı: ${id}`);
+    if (ids.has(id)) throw new Error(`Process IDs must be unique: ${id}`);
     ids.add(id);
     if (!Number.isSafeInteger(process.arrival) || process.arrival < 0) {
-      throw new Error(`${id}: geliş zamanı sıfır veya pozitif güvenli bir tam sayı olmalı.`);
+      throw new Error(`${id}: arrival time must be a nonnegative safe integer.`);
     }
     if (!Number.isSafeInteger(process.burst) || process.burst <= 0) {
-      throw new Error(`${id}: CPU süresi pozitif güvenli bir tam sayı olmalı.`);
+      throw new Error(`${id}: CPU burst must be a positive safe integer.`);
     }
     totalBurst += process.burst;
     latestArrival = Math.max(latestArrival, process.arrival);
@@ -28,15 +28,15 @@ function validate(processes, algorithm, quantum) {
       remaining: process.burst, firstStart: null, completion: null };
   });
   if (!Number.isSafeInteger(latestArrival + totalBurst)) {
-    throw new Error('Zaman değerlerinin toplamı JavaScript güvenli tam sayı sınırını aşıyor.');
+    throw new Error('The combined time values exceed JavaScript’s safe integer range.');
   }
   if (algorithm === 'RR' && (!Number.isSafeInteger(quantum) || quantum <= 0)) {
-    throw new Error('Round Robin quantum değeri pozitif güvenli bir tam sayı olmalı.');
+    throw new Error('Round Robin quantum must be a positive safe integer.');
   }
   return jobs;
 }
 
-// Son eşitlik bozucu işlem adı değil, giriş listesindeki sıradır.
+// Break remaining ties by input order, not process ID.
 const arrivalOrder = (a, b) => a.arrival - b.arrival || a.index - b.index;
 
 export function simulate(processes, algorithm, quantum = 2) {
@@ -47,11 +47,11 @@ export function simulate(processes, algorithm, quantum = 2) {
 
   function record(id, start, end) {
     const previous = timeline.at(-1);
-    // RR'de ardışık aynı işlem dilimleri quantum sınırını korur.
+    // Keep consecutive RR slices separate to preserve quantum boundaries.
     if (algorithm !== 'RR' && previous?.id === id && previous.end === start) {
       previous.end = end;
     } else {
-      timeline.push({ id, start, end }); // id: null, CPU'nun boş olduğunu belirtir.
+      timeline.push({ id, start, end }); // id: null represents an idle CPU.
     }
   }
 
@@ -84,7 +84,7 @@ export function simulate(processes, algorithm, quantum = 2) {
       }
       const job = queue.shift();
       run(job, Math.min(quantum, job.remaining));
-      // Sınır anındaki gelişler, çalışan işlem yeniden eklenmeden önce alınır.
+      // Enqueue boundary arrivals before requeuing the unfinished running process.
       enqueueArrivals();
       if (job.remaining > 0) queue.push(job);
     }
@@ -108,7 +108,7 @@ export function simulate(processes, algorithm, quantum = 2) {
       let chosen = ready[0];
       if (algorithm === 'SRTF' && current?.remaining > 0
           && current.remaining === chosen.remaining) {
-        chosen = current; // Eşit kalan sürede çalışan işlem kesilmez.
+        chosen = current; // Keep the current process on equal remaining time.
       }
       let duration = chosen.remaining;
       if (algorithm === 'SRTF') {

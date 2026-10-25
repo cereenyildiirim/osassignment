@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17634d">
+  <title>CPU Lab — CPU Scheduling Simulator</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./"><span class="brand-icon" aria-hidden="true">▥</span> CPU<span>Lab</span></a>
+    <span class="course">CSE513 <span aria-hidden="true">/</span> Operating Systems</span>
+  </header>
+  <main>
+    <div class="intro">
+      <h1>CPU Scheduling Simulator</h1>
+      <p>Compare FCFS, SJF, SRTF and Round Robin.</p>
+      <div class="model-tags"><span>Single CPU</span><span>No I/O</span><span>Context switch cost: 0</span></div>
+    </div>
+    <div class="workspace">
+      <form id="simulation-form" class="panel setup" novalidate>
+        <div class="section-title"><span class="step">01</span><h2>Simulation setup</h2></div>
+        <fieldset>
+          <legend>Processes</legend>
+          <div class="presets"><span>Load example</span><button type="button" id="load-a">Workload A</button><button type="button" id="load-b">Workload B</button></div>
+          <div class="input-table-wrap">
+            <table class="input-table">
+              <thead><tr><th scope="col">Process ID</th><th scope="col">Arrival time</th><th scope="col">CPU burst</th><th scope="col"><span class="sr-only">Remove</span></th></tr></thead>
+              <tbody id="process-inputs"></tbody>
+            </table>
+          </div>
+          <button type="button" id="add-process" class="add-button">＋ Add process</button>
+          <p class="field-help">Use unique IDs, nonnegative integer arrival times and positive integer CPU bursts.</p>
+        </fieldset>
+        <fieldset class="algorithm-fieldset">
+          <legend>Scheduling algorithm</legend>
+          <div class="algorithm-grid">
+            <label class="algorithm-option"><input type="radio" name="algorithm" value="FCFS"><span><strong>FCFS</strong><small>First come, first served</small></span></label>
+            <label class="algorithm-option"><input type="radio" name="algorithm" value="SJF"><span><strong>SJF</strong><small>Shortest job · non-preemptive</small></span></label>
+            <label class="algorithm-option"><input type="radio" name="algorithm" value="SRTF" checked><span><strong>SRTF</strong><small>Shortest remaining time</small></span></label>
+            <label class="algorithm-option"><input type="radio" name="algorithm" value="RR"><span><strong>Round Robin</strong><small>FIFO time slices</small></span></label>
+          </div>
+          <p id="algorithm-description" class="algorithm-description"></p>
+          <div class="quantum-row"><label for="quantum">Time quantum <small>Round Robin only</small></label><input id="quantum" type="number" min="1" step="1" value="2" disabled></div>
+        </fieldset>
+        <p id="error-message" class="error" role="alert" hidden></p>
+        <button class="run-button" type="submit">Run simulation <span aria-hidden="true">→</span></button>
+        <p id="input-status" class="field-help" role="status"></p>
+      </form>
+      <section class="output" aria-labelledby="output-heading">
+        <div class="output-title"><div class="section-title"><span class="step">02</span><h2 id="output-heading">Results</h2></div><span id="result-badge" class="result-badge"></span></div>
+        <div id="empty-state" class="panel empty-state" hidden><span aria-hidden="true">↻</span><h3>Inputs changed</h3><p>Run the simulation to update the results.</p></div>
+        <div id="results">
+          <div class="metrics">
+            <article class="metric"><p>Average turnaround</p><strong id="average-turnaround">—</strong><small>Time in the system</small></article>
+            <article class="metric"><p>Average waiting</p><strong id="average-waiting">—</strong><small>Time waiting for the CPU</small></article>
+            <article class="metric"><p>Average response</p><strong id="average-response">—</strong><small>Time until first execution</small></article>
+          </div>
+          <section class="panel chart-panel" aria-labelledby="chart-heading">
+            <div class="card-heading"><h3 id="chart-heading">Gantt chart</h3></div>
+            <p class="field-help">Blocks show execution intervals; idle intervals are labeled Idle.</p>
+            <div class="gantt-scroll" tabindex="0" role="region" aria-label="Horizontally scrollable Gantt chart"><div id="gantt" class="gantt"></div></div>
+            <div id="legend" class="legend" aria-label="Process colors"></div>
+            <div class="chart-footer"><span id="timeline-summary"></span><span id="quantum-note" hidden>RR quantum boundaries are shown separately.</span></div>
+          </section>
+          <section class="panel results-panel" aria-labelledby="table-heading">
+            <div class="card-heading"><h3 id="table-heading">Process metrics</h3></div>
+            <div class="results-scroll" tabindex="0" role="region" aria-label="Process results table">
+              <table class="results-table"><thead><tr><th scope="col">Process</th><th scope="col">Arrival</th><th scope="col">Burst</th><th scope="col">First start</th><th scope="col">Completion</th><th scope="col">Turnaround</th><th scope="col">Waiting</th><th scope="col">Response</th></tr></thead><tbody id="result-rows"></tbody></table>
+            </div>
+            <details><summary>How are these calculated?</summary><div class="formula-grid"><p><strong>Turnaround</strong>Completion − arrival</p><p><strong>Waiting</strong>Turnaround − CPU burst</p><p><strong>Response</strong>First start − arrival</p></div><p class="field-help">Intervals use [start, end): 2–5 represents 3 time units.</p></details>
+          </section>
+          <details class="panel trace-panel"><summary>Execution intervals</summary><ol id="trace-list"></ol></details>
+          <p id="result-status" class="sr-only" role="status"></p>
+        </div>
+      </section>
+    </div>
+    <footer>CSE513 Assignment 1 <span>·</span> Single-CPU scheduling model</footer>
+  </main>
+</body>
+</html>
