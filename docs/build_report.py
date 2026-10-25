@@ -92,6 +92,8 @@ console.log(JSON.stringify(data));
 data = json.loads(subprocess.check_output(
     ['node', '--input-type=module', '-e', script], cwd=ROOT, text=True))
 subprocess.run(['node', '--test', 'scheduler.test.mjs'], cwd=ROOT, check=True)
+experiment = json.loads(subprocess.check_output(
+    ['node', 'scripts/rr-boundary-experiment.mjs', '--json'], cwd=ROOT, text=True))
 
 font_dir = Path('/usr/share/fonts/truetype/dejavu')
 if (font_dir / 'DejaVuSans.ttf').exists():
@@ -207,7 +209,7 @@ explanations = {
 
 page('CSE513 Assignment 1: CPU Scheduling Simulator')
 p(f'<link href="{SITE}" color="#17634d">{SITE}</link>')
-p('Working report. Analysis question 6 still needs an actual development-error example.', 'small')
+p('Analysis question 6 documents a deliberately introduced error in a temporary copy of the engine.', 'small')
 heading('Overview')
 p('The simulator shows how FCFS, non-preemptive SJF, SRTF and Round Robin schedule the same processes. Each run produces a Gantt chart, per-process metrics and three averages. The website lets users edit the process list, load either assignment workload and change the RR quantum.')
 p('The model has one CPU, one CPU burst per process, no I/O and zero context-switch cost. Times are integer units, not measured wall-clock time. This is a scheduling-policy model, not an implementation of Ubuntu\'s scheduler.')
@@ -292,12 +294,27 @@ heading('4. Why estimate CPU bursts in a real operating system?')
 p('A real operating system usually does not know when a program will finish its next CPU burst or request I/O. That depends on the program and its input. A scheduler can estimate future bursts from earlier measurements. Here, the user supplies each burst in advance, so the simulator can use the exact value.')
 heading('5. Can SJF or SRTF cause starvation?')
 p('Yes. A continuing stream of short jobs can repeatedly push a long job out of the SJF selection or interrupt it under SRTF. The assignment workloads are finite, so arrivals eventually stop. With finite bursts and no avoidable idle time, every process eventually finishes, even if a long process waits much longer than the others.')
-heading('6. An implementation mistake and the test that exposed it')
-p('<b>Still to complete:</b> No actual scheduling defect has been recorded during development so far. This section needs a real example before submission.')
-p('One rule already has a regression test: RR must queue a boundary arrival before requeuing the unfinished running process. For A(0,4), B(2,1), q=2, the expected schedule is 0-2 A | 2-3 B | 3-5 A. Reversing that enqueue order would produce the wrong result. The test passes; it is a preventive test, not a record of a bug that occurred.')
+page('Implementation error experiment')
+heading('6. RR queue order at a quantum boundary')
+p('For this example, a queue-order mistake was deliberately introduced in a temporary copy of the engine. This was a controlled test experiment, not a defect originally found in the application. The experiment can be repeated with <b>node scripts/rr-boundary-experiment.mjs</b>.')
+heading('The mistake')
+p('The faulty version puts the unfinished running process back in the queue before adding new arrivals. The assignment requires the opposite order at a quantum boundary. The two operations are individually valid, so the code runs without a syntax error; the scheduling decision is wrong.')
+p('Faulty order: <b>requeue running process; enqueue arrivals</b>.<br/>Correct order: <b>enqueue arrivals; requeue running process</b>.')
+heading('A small test that exposes it')
+p('Input: A(arrival 0, burst 4), B(arrival 2, burst 1), quantum=2. A runs from 0 to 2. At time 2, A has two units left and B has just arrived. B must be queued before A.')
+def experiment_timeline(run):
+    return timeline_text([(row['id'], row['start'], row['end']) for row in run['timeline']])
+p('<b>Expected:</b> ' + experiment_timeline(experiment['expected']) + '<br/><b>Faulty output:</b> ' + experiment_timeline(experiment['faulty']))
+table([['Version', 'Process', 'Completion', 'Waiting', 'Response']] +
+      [[label, row['id'], row['completion'], row['waiting'], row['response']]
+       for label, key in [('Correct', 'expected'), ('Faulty', 'faulty')]
+       for row in experiment[key]['results']], [90, 70, 110, 109, 109])
+p('In the faulty run, B waits until time 4 instead of starting at time 2. Its waiting and response times both increase from 0 to 2. Every process still receives its full burst and no intervals overlap, so the general correctness properties alone would not catch this policy error.')
+heading('Test result and correction')
+p('The existing test, <b>RR: boundary arrivals are enqueued before the running process</b>, compares the complete timeline with the expected one. It fails with an assertion error for the faulty engine (exit code ' + str(experiment['faultyTestExitCode']) + ') and passes with the correct engine (exit code ' + str(experiment['correctTestExitCode']) + '). Moving arrival handling before requeuing fixes the decision at time 2. The experiment leaves the project engine unchanged; all 16 regular scheduling tests still pass.')
 heading('AI assistance')
-p('OpenAI Codex helped explain the scheduling rules, work through the examples, write and debug the JavaScript, and edit this report. Generated results were checked against the earlier calculations, the Node.js tests and browser checks. Python and ReportLab were used to create the PDF. No corrected or rejected AI suggestion has been recorded so far.')
-p('The report and implementation should be reviewed before submission, especially the unfinished error example. The assignment rules and metric definitions come from CSE513-Assignment-1.pdf.')
+p('OpenAI Codex helped explain the scheduling rules, work through the examples, write and debug the JavaScript, design the controlled error experiment, and edit this report. Generated results were checked against the earlier calculations, the Node.js tests and browser checks. Python and ReportLab were used to create the PDF. No corrected or rejected AI suggestion has been recorded so far.')
+p('The assignment rules and metric definitions come from CSE513-Assignment-1.pdf.')
 
 
 def footer(canvas, document):

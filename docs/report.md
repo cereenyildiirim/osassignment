@@ -2,7 +2,7 @@
 
 [https://cereenyildiirim.github.io/osassignment/](https://cereenyildiirim.github.io/osassignment/)
 
-Working report. Analysis question 6 still needs an actual development-error example.
+Analysis question 6 documents a deliberately introduced error in a temporary copy of the engine.
 
 ### Overview
 
@@ -399,14 +399,41 @@ A real operating system usually does not know when a program will finish its nex
 
 Yes. A continuing stream of short jobs can repeatedly push a long job out of the SJF selection or interrupt it under SRTF. The assignment workloads are finite, so arrivals eventually stop. With finite bursts and no avoidable idle time, every process eventually finishes, even if a long process waits much longer than the others.
 
-### 6. An implementation mistake and the test that exposed it
+## Implementation error experiment
 
-**Still to complete:** No actual scheduling defect has been recorded during development so far. This section needs a real example before submission.
+### 6. RR queue order at a quantum boundary
 
-One rule already has a regression test: RR must queue a boundary arrival before requeuing the unfinished running process. For A(0,4), B(2,1), q=2, the expected schedule is 0-2 A | 2-3 B | 3-5 A. Reversing that enqueue order would produce the wrong result. The test passes; it is a preventive test, not a record of a bug that occurred.
+For this example, a queue-order mistake was deliberately introduced in a temporary copy of the engine. This was a controlled test experiment, not a defect originally found in the application. The experiment can be repeated with **node scripts/rr-boundary-experiment.mjs**.
+
+### The mistake
+
+The faulty version puts the unfinished running process back in the queue before adding new arrivals. The assignment requires the opposite order at a quantum boundary. The two operations are individually valid, so the code runs without a syntax error; the scheduling decision is wrong.
+
+Faulty order: **requeue running process; enqueue arrivals**.
+Correct order: **enqueue arrivals; requeue running process**.
+
+### A small test that exposes it
+
+Input: A(arrival 0, burst 4), B(arrival 2, burst 1), quantum=2. A runs from 0 to 2. At time 2, A has two units left and B has just arrived. B must be queued before A.
+
+**Expected:** 0-2: A | 2-3: B | 3-5: A
+**Faulty output:** 0-2: A | 2-4: A | 4-5: B
+
+| Version | Process | Completion | Waiting | Response |
+| --- | --- | --- | --- | --- |
+| Correct | A | 5 | 1 | 0 |
+| Correct | B | 3 | 0 | 0 |
+| Faulty | A | 4 | 0 | 0 |
+| Faulty | B | 5 | 2 | 2 |
+
+In the faulty run, B waits until time 4 instead of starting at time 2. Its waiting and response times both increase from 0 to 2. Every process still receives its full burst and no intervals overlap, so the general correctness properties alone would not catch this policy error.
+
+### Test result and correction
+
+The existing test, **RR: boundary arrivals are enqueued before the running process**, compares the complete timeline with the expected one. It fails with an assertion error for the faulty engine (exit code 1) and passes with the correct engine (exit code 0). Moving arrival handling before requeuing fixes the decision at time 2. The experiment leaves the project engine unchanged; all 16 regular scheduling tests still pass.
 
 ### AI assistance
 
-OpenAI Codex helped explain the scheduling rules, work through the examples, write and debug the JavaScript, and edit this report. Generated results were checked against the earlier calculations, the Node.js tests and browser checks. Python and ReportLab were used to create the PDF. No corrected or rejected AI suggestion has been recorded so far.
+OpenAI Codex helped explain the scheduling rules, work through the examples, write and debug the JavaScript, design the controlled error experiment, and edit this report. Generated results were checked against the earlier calculations, the Node.js tests and browser checks. Python and ReportLab were used to create the PDF. No corrected or rejected AI suggestion has been recorded so far.
 
-The report and implementation should be reviewed before submission, especially the unfinished error example. The assignment rules and metric definitions come from CSE513-Assignment-1.pdf.
+The assignment rules and metric definitions come from CSE513-Assignment-1.pdf.
