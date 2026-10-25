@@ -22,7 +22,7 @@ Tables use A for arrival, B for burst, S for first start and C for completion. I
 
 ### Run locally
 
-Download the source ZIP from the repository or clone the feature branch. Open a terminal in the project folder and run:
+Download the source ZIP from the repository or clone the main branch. Open a terminal in the project folder and run:
 
 **python3 -m http.server 8000 --bind 127.0.0.1**
 
@@ -32,7 +32,7 @@ Load Workload A or B, choose an algorithm, set the quantum for RR and click **Ru
 
 The same local setup instructions, dependencies and limitations are documented in **README.md**, included with the source code.
 
-Source code: [github.com/cereenyildiirim/osassignment/tree/feature](https://github.com/cereenyildiirim/osassignment/tree/feature)
+Source code: [github.com/cereenyildiirim/osassignment/tree/main](https://github.com/cereenyildiirim/osassignment/tree/main)
 
 ## Workload A: FCFS
 

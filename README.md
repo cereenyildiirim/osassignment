@@ -67,4 +67,4 @@ ReportLab is only needed to build the report, not to run the simulator.
 
 ## Deployment
 
-GitHub Pages publishes the root of the `feature` branch. Pushing changes to that branch updates the live site. `main` will be updated when development is finished.
+The project is hosted on GitHub Pages. The default development branch is `main`.

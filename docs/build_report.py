@@ -87,7 +87,7 @@ if args.name or args.student_id or args.degree:
     if destination.is_relative_to(ROOT):
         parser.error('Write personal submission copies outside the public repository.')
 SITE = 'https://cereenyildiirim.github.io/osassignment/'
-SOURCE = 'https://github.com/cereenyildiirim/osassignment/tree/feature'
+SOURCE = 'https://github.com/cereenyildiirim/osassignment/tree/main'
 script = """
 import { simulate } from './scheduler.mjs';
 import { WORKLOAD_A, WORKLOAD_B } from './workloads.mjs';
@@ -247,12 +247,12 @@ heading('Metrics')
 p('<b>Turnaround (TAT)</b> = completion - arrival<br/><b>Waiting (WT)</b> = turnaround - CPU burst<br/><b>Response (RT)</b> = first start - arrival')
 p('Tables use A for arrival, B for burst, S for first start and C for completion. Intervals use [start, end), so 2-5 represents three time units.')
 heading('Run locally')
-p('Download the source ZIP from the repository or clone the feature branch. Open a terminal in the project folder and run:')
+p('Download the source ZIP from the repository or clone the main branch. Open a terminal in the project folder and run:')
 p('<b>python3 -m http.server 8000 --bind 127.0.0.1</b>')
 p('Open <b>http://127.0.0.1:8000</b> in a modern browser. On Windows, <b>py -m http.server 8000 --bind 127.0.0.1</b> can be used instead. Stop the server with Ctrl+C. Python 3 is needed only to serve the files locally; no npm installation, backend or database is required. JavaScript modules should be opened through the server rather than by double-clicking index.html.')
 p('Load Workload A or B, choose an algorithm, set the quantum for RR and click <b>Run simulation</b>. Processes can also be added, edited or removed. Node.js 22 or later is needed only for the tests: <b>node --test scheduler.test.mjs</b>. All 16 tests pass.')
 p('The same local setup instructions, dependencies and limitations are documented in <b>README.md</b>, included with the source code.')
-p(f'Source code: <link href="{SOURCE}" color="#17634d">github.com/cereenyildiirim/osassignment/tree/feature</link>')
+p(f'Source code: <link href="{SOURCE}" color="#17634d">github.com/cereenyildiirim/osassignment/tree/main</link>')
 
 for workload in ['A', 'B']:
     for algorithm in ['FCFS', 'SJF', 'SRTF', 'RR']:
