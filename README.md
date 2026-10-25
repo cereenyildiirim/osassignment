@@ -1,83 +1,69 @@
 # CPU Scheduling Simulator
 
-CSE513 ödevi için adım adım geliştirilen CPU zamanlama simülatörü.
-Tarayıcıda çalışan, sunucu tarafı uygulama veya veritabanı gerektirmeyen bir CPU zamanlama simülatörü.
+A browser-based simulator for CSE513 Assignment 1. It compares FCFS, non-preemptive SJF, SRTF and Round Robin on a single CPU.
 
-## Web arayüzünü çalıştırma
+[Open the simulator](https://cereenyildiirim.github.io/osassignment/) · [Assignment report](docs/CSE513_Assignment_Report.pdf)
 
-Depo dizininde Python 3 ile statik dosya sunucusunu başlatın:
+## Run locally
+
+From the project directory, start a static file server:
 
 ```sh
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-Tarayıcıda `http://127.0.0.1:8000` adresini açın. Durdurmak için terminalde Ctrl+C kullanın.
-ES modülleri kullanıldığı için `index.html` dosyasını doğrudan çift tıklamak yerine HTTP üzerinden açın.
-Python yalnızca yerel geliştirme için dosya sunar; uygulamanın backend'i değildir.
-Modern bir tarayıcı yeterlidir; uygulama için npm kurulumu gerekmez.
+Open `http://127.0.0.1:8000` in a modern browser. Stop the server with Ctrl+C.
+Use a local server rather than opening `index.html` directly, since the app uses JavaScript modules.
+No npm install, backend or database is needed.
 
-### Kullanım
+## Use the simulator
 
-1. Workload A veya Workload B yükleyin; isterseniz işlem ekleyin, düzenleyin veya silin.
-2. FCFS, SJF, SRTF veya Round Robin seçin. Round Robin için quantum değerini girin.
-3. Simülasyonu çalıştırın. Girdi değişiklikleri eski sonuçları gizler; yeniden çalıştırmanız gerekir.
-4. Gantt grafiğini, işlem tablosunu ve ortalamaları inceleyin. Dar ekranlarda grafik ve tablo yatay kaydırılır.
+Load Workload A or B, or enter your own processes. Each process needs a unique ID, a nonnegative integer arrival time and a positive integer CPU burst. Select an algorithm, set the quantum if using Round Robin, and click **Run simulation**.
 
-Başlangıçta A verisinin SRTF sonucu gösterilir. Örnek yükleme düğmeleri seçili algoritmayla yeniden hesaplar.
-Boş CPU aralıkları Idle olarak işaretlenir. RR quantum sınırları aynı işlem devam etse bile ayrı gösterilir.
-Grafikte kısa dilimler okunabilirlik için minimum genişliğe sahiptir; kesin süreler blok sınırlarında,
-blok açıklamalarında ve “Çalışma aralıklarını incele” bölümünde belirtilir.
+The results include a Gantt chart, per-process metrics and average turnaround, waiting and response times. Changing an input hides the old results until you run again. The example buttons load and run a workload using the selected algorithm.
 
-## Dosyalar
+## Tests
 
-- `index.html`: İşlem girişleri, algoritma seçimi ve sonuç ekranının yapısı.
-- `styles.css`: Masaüstü ve mobil görünüm.
-- `app.mjs`: Girdileri okur, hesaplama motorunu çağırır ve sonuçları ekrana yerleştirir.
-- `scheduler.mjs`: FCFS, kesintisiz SJF, SRTF ve Round Robin; giriş doğrulama ve ölçümler.
-- `workloads.mjs`: Ödevdeki A ve B işlem listeleri.
-- `scheduler.test.mjs`: Elle hesaplanan sekiz örnek, ek iş yükleri ve özel kural testleri.
-
-## Yerel çalıştırma
-
-Node.js 22 veya üzeri önerilir. Harici paket ve paket kurulumu gerekmez.
-Depo dizininde testleri çalıştırın:
+With Node.js 22 or later:
 
 ```sh
 node --test scheduler.test.mjs
 ```
 
-A iş yükünün SRTF sonucunu görmek için:
+The 16 tests cover the hand-calculated A/B schedules and metrics, idle time, tie-breaking, SRTF preemption, RR boundary arrivals and invalid input. They also check CPU burst totals, arrival constraints, non-overlapping intervals and nonnegative waiting and response times.
+
+## Files
+
+| File | Purpose |
+| --- | --- |
+| `index.html`, `styles.css` | Page structure and responsive layout |
+| `app.mjs` | Reads inputs and displays simulation results |
+| `scheduler.mjs` | Scheduling algorithms, validation and metrics |
+| `workloads.mjs` | Assignment workloads A and B |
+| `scheduler.test.mjs` | Scheduling tests |
+| `docs/` | Report, editable text and PDF generation script |
+
+## Model and limits
+
+- One CPU, one burst per process, no I/O and zero context-switch cost. This is not Ubuntu's scheduler.
+- Ties use arrival time, then input order. SRTF keeps the running process on equal remaining time.
+- RR enqueues arrivals at a quantum boundary before requeuing the unfinished running process. Consecutive slices remain separate in the chart.
+- Short chart blocks have a minimum width for readability. Use the time labels or **Execution intervals** for exact durations; charts and tables scroll on narrow screens.
+- The UI rejects workloads requiring more than 5,000 RR slices. Time values must fit JavaScript's safe integer range.
+- Process colors repeat after six IDs. Labels identify each process.
+
+## Report
+
+The [English report](docs/CSE513_Assignment_Report.pdf) includes the eight worked examples, additional tests and analysis. Its remaining draft item is the account of a development mistake in analysis question 6.
+
+To regenerate the PDF and editable Markdown, install Python's `reportlab` package and run:
 
 ```sh
-node --input-type=module -e "import {simulate} from './scheduler.mjs'; import {WORKLOAD_A} from './workloads.mjs'; const r=simulate(WORKLOAD_A,'SRTF'); console.table(r.timeline); console.table(r.results); console.log(r.averages);"
+python3 docs/build_report.py
 ```
 
-## Veri modeli
+ReportLab is only needed to build the report, not to run the simulator.
 
-Giriş işlemi: `{ id: 'P1', arrival: 0, burst: 8 }`.
-`simulate(processes, algorithm, quantum = 2)` giriş verisini değiştirmez.
-Algoritma: `FCFS`, `SJF`, `SRTF` veya `RR`.
+## Deployment
 
-Sonuçtaki `timeline`, `{id, start, end}` aralıklarından oluşur.
-`id: null` CPU'nun boş olduğunu belirtir. Aralıklar `[start, end)` biçimindedir.
-`results` işlem başına ölçümleri, `averages` üç ortalamayı içerir.
-Round Robin'de art arda aynı işlem çalışsa bile quantum dilimleri birleştirilmez.
-
-## Sınırlar
-
-Tek CPU, işlem başına tek CPU burst, I/O yok, geçiş maliyeti sıfırdır.
-Geliş zamanı negatif olmayan; CPU süresi ve quantum pozitif tam sayı olmalıdır.
-Sayısal doğruluk için JavaScript güvenli tam sayı aralığı kontrol edilir.
-Çok küçük quantum ve çok büyük CPU süreleri çok sayıda çizelge dilimi oluşturabilir.
-Arayüz, tarayıcıyı korumak için 5.000'den fazla RR dilimi oluşturacak girişleri açıklayıcı mesajla reddeder.
-Grafikte altı renk dönüşümlü kullanılır; işlem ID'leri renklerden bağımsız olarak gösterilir.
-Bu uygulama Ubuntu'nun gerçek zamanlayıcısını taklit etmez.
-
-## Doğrulanan arayüz davranışları
-
-Geliştirme ortamında Chromium ve Playwright ile A/B'nin sekiz algoritma örneği çalıştırıldı.
-Ekrandaki tüm işlem ölçümleri ve çalışma aralıkları motor çıktısıyla; üç ortalama ayrıca elle bulunan
-değerlerle karşılaştırıldı. Boş CPU aralıkları, işlem ekleme/silme/düzenleme, geçersiz geliş/quantum,
-yinelenen ID, kullanıcı metninin HTML olarak yorumlanmaması ve 320/390 piksel görünüm kontrolleri geçti.
-Bu tarayıcı kontrolleri geliştirme ortamında çalıştırıldı; yukarıdaki Node.js test komutu hesaplama
-motorunun 16 testini çalıştırır. Site henüz herkese açık bir adrese yayınlanmadı.
+GitHub Pages publishes the root of the `feature` branch. Pushing changes to that branch updates the live site. `main` will be updated when development is finished.

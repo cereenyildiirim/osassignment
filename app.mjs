@@ -6,15 +6,15 @@ const form = $('#simulation-form');
 const inputs = $('#process-inputs');
 const palette = ['#c5dfd0', '#c9def1', '#efdbb5', '#dbd1ec', '#efcfc9', '#c3e1df'];
 const descriptions = {
-  FCFS: 'Geliş sırasına göre çalıştırır. Başlayan işlem tamamlanana kadar CPU’yu bırakmaz.',
-  SJF: 'CPU boşaldığında, hazır işlemlerden CPU süresi en kısa olanı seçer. Çalışanı kesmez.',
-  SRTF: 'Kalan süresi en kısa olanı çalıştırır. Yalnızca daha kısa bir iş geldiğinde keser; eşitlikte devam eder.',
-  RR: 'FIFO kuyruğundaki işlemlere sırayla bir quantum verir. Sınırdaki gelişler, yeniden eklenen işlemden önce gelir.',
+  FCFS: 'Runs processes in arrival order. Each process keeps the CPU until it finishes.',
+  SJF: 'Selects the shortest ready job when the CPU becomes free. Does not preempt.',
+  SRTF: 'Runs the process with the shortest remaining time. Preempts only for a strictly shorter job.',
+  RR: 'Gives each queued process one time slice. Boundary arrivals join before the running process is requeued.',
 };
-const numberFormat = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 4 });
+const numberFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 });
 let displayed = false;
 
-// Kullanıcı metinleri innerHTML yerine textContent ile yerleştirilir.
+// Use textContent so process IDs are displayed as text, not HTML.
 function element(tag, text, className) {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -26,14 +26,14 @@ function invalidate() {
   $('#error-message').hidden = true;
   $('#results').hidden = true;
   $('#empty-state').hidden = false;
-  $('#result-badge').textContent = 'Çalıştırılmayı bekliyor';
-  $('#input-status').textContent = 'Girdiler değişti. Sonuçları güncellemek için çalıştır.';
+  $('#result-badge').textContent = 'Not run yet';
+  $('#input-status').textContent = 'Inputs changed. Run the simulation to update the results.';
   displayed = false;
 }
 
 function addRow(process) {
   const row = document.createElement('tr');
-  for (const [key, label] of [['id', 'İşlem ID'], ['arrival', 'Geliş zamanı'], ['burst', 'CPU süresi']]) {
+  for (const [key, label] of [['id', 'Process ID'], ['arrival', 'Arrival time'], ['burst', 'CPU burst']]) {
     const input = document.createElement('input');
     input.dataset.field = key;
     input.type = key === 'id' ? 'text' : 'number';
@@ -50,7 +50,7 @@ function addRow(process) {
   }
   const remove = element('button', '×', 'remove-button');
   remove.type = 'button';
-  remove.setAttribute('aria-label', 'İşlemi sil');
+  remove.setAttribute('aria-label', 'Remove process');
   remove.addEventListener('click', () => { row.remove(); invalidate(); });
   const cell = document.createElement('td');
   cell.append(remove);
@@ -97,7 +97,7 @@ function render(result) {
   }
   const end = result.timeline.at(-1).end;
   const duration = result.timeline.map(s => s.end - s.start);
-  // Kısa dilimler okunabilir kalır; uzun çizelgeler kendi alanında kaydırılır.
+  // Keep short slices readable and allow long timelines to scroll.
   const widths = duration.map(d => Math.max(48, d / end * 760));
   const totalWidth = widths.reduce((sum, w) => sum + w, 0);
   let idle = 0;
@@ -109,12 +109,12 @@ function render(result) {
     block.style.minWidth = `${widths[index]}px`;
     if (id !== null) block.style.background = colors.get(id);
     else idle += finish - start;
-    block.title = `${label}: ${start}–${finish} (${finish - start} birim)`;
+    block.title = `${label}: ${start}–${finish} (${finish - start} units)`;
     block.setAttribute('aria-label', block.title);
     block.append(element('span', label, 'segment-id'), element('span', start, 'tick'));
     if (index === result.timeline.length - 1) block.append(element('span', finish, 'tick end-tick'));
     $('#gantt').append(block);
-    $('#trace-list').append(element('li', `${start}–${finish}: ${label} · ${finish - start} birim`));
+    $('#trace-list').append(element('li', `${start}–${finish}: ${label} · ${finish - start} units`));
   });
   for (const [id, color] of colors) {
     const item = element('span', undefined, 'legend-item');
@@ -123,15 +123,15 @@ function render(result) {
     item.append(dot, document.createTextNode(id));
     $('#legend').append(item);
   }
-  if (idle > 0) $('#legend').append(element('span', '▧ Idle · CPU boş', 'legend-item'));
-  $('#timeline-summary').textContent = `Bitiş: ${end} · CPU kullanımı: ${end - idle} · Boş süre: ${idle}`;
+  if (idle > 0) $('#legend').append(element('span', '▧ Idle', 'legend-item'));
+  $('#timeline-summary').textContent = `Completion: ${end} · CPU busy: ${end - idle} · Idle: ${idle}`;
   $('#quantum-note').hidden = result.algorithm !== 'RR';
   $('#result-badge').textContent = result.algorithm === 'RR' ? `RR · q = ${result.quantum}` : result.algorithm;
   $('#results').hidden = false;
   $('#empty-state').hidden = true;
   $('#error-message').hidden = true;
-  $('#input-status').textContent = `${result.results.length} işlem için hesaplama tamamlandı.`;
-  $('#result-status').textContent = `${result.algorithm} sonuçları güncellendi.`;
+  $('#input-status').textContent = `${result.results.length} processes simulated.`;
+  $('#result-status').textContent = `${result.algorithm} results updated.`;
   displayed = true;
 }
 
@@ -140,17 +140,17 @@ function runSimulation() {
     const processes = readProcesses();
     const algorithm = form.elements.algorithm.value;
     const quantum = $('#quantum').valueAsNumber;
-    // Tarayıcının aşırı sayıda RR dilimiyle kilitlenmesini önler.
+    // Avoid rendering so many RR slices that the browser becomes unresponsive.
     if (algorithm === 'RR' && Number.isSafeInteger(quantum) && quantum > 0
         && processes.reduce((sum, p) => sum + Math.ceil(p.burst / quantum), 0) > 5000) {
-      throw new Error('Bu senaryo 5.000’den fazla RR dilimi oluşturuyor. CPU sürelerini azalt veya quantum değerini artır.');
+      throw new Error('This workload creates more than 5,000 RR slices. Reduce CPU bursts or increase the quantum.');
     }
     render(simulate(processes, algorithm, quantum));
   } catch (error) {
     invalidate();
     $('#error-message').textContent = error.message;
     $('#error-message').hidden = false;
-    $('#input-status').textContent = 'Girdileri kontrol edip tekrar çalıştır.';
+    $('#input-status').textContent = 'Check the inputs and run again.';
   }
 }
 
